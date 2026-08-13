@@ -218,8 +218,8 @@ if (!gotLock) {
 } else {
   app.on('second-instance', () => showWindow());
 
-  app.whenReady().then(() => {
-    store = new Store(path.join(dataDir(), 'mdc-daily.sqlite'));
+  app.whenReady().then(async () => {
+    store = await Store.open(path.join(dataDir(), 'mdc-daily.sqlite'));
 
     // Proper autostart entry (registry Run key on Windows), not a shortcut hack.
     app.setLoginItemSettings({

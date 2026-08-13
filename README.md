@@ -104,6 +104,11 @@ npm install
 npm start
 ```
 
+> No compiler needed. MDC Daily uses pure-JavaScript dependencies (SQLite via
+> `sql.js`/WebAssembly, and Windows DPAPI encryption via Electron's built-in
+> `safeStorage`), so `npm install` just downloads files — it does **not** need
+> Python or Visual Studio build tools.
+
 ### Prove the monday sync from the console (before any UI)
 ```bat
 npm run prove:monday
@@ -121,11 +126,6 @@ The signed-ready NSIS installer lands in `release\MDC Daily Setup <version>.exe`
 Double-click to install; it creates Start-menu and desktop shortcuts and (per
 your setting) **starts with Windows** via a proper registry entry. The app lives
 in the tray — its icon badges with your overdue + due-today count.
-
-> **Native modules:** `better-sqlite3` and `keytar` are native. `npm install`
-> runs `electron-builder install-app-deps` automatically to rebuild them for
-> Electron. If you ever see a "was compiled against a different Node version"
-> error, run `npm run rebuild`.
 
 ---
 
@@ -164,8 +164,8 @@ SQLite file:
 - **Full reset:** quit MDC Daily (tray → Quit), delete that `data` folder, relaunch.
   Your monday/Outlook tasks re-sync fresh; only local check-offs/snoozes/manual
   tasks are lost.
-- **Re-run Outlook sign-in:** open **Windows Credential Manager → Windows
-  Credentials**, delete the `MDC Daily / msal-token-cache` entry, then Sync now.
+- **Re-run Outlook sign-in:** delete `msal-token-cache.bin` from the same `data`
+  folder above (it's your encrypted token), then Sync now to sign in again.
 - **Audit any write-back:** if you ever enable write-back, every mutation is
   appended to `mutation-audit.log` in the same `data` folder.
 
@@ -188,7 +188,7 @@ src/
   main/
     db.js               SQLite schema + merge-by-stable-id (never wipes state)
     config.js           .env + email-rules loader
-    keychain.js         OS keychain for the refresh token
+    keychain.js         encrypted token storage (Electron safeStorage / DPAPI)
     main.js             tray, window, scheduler, autostart, notifications, IPC
   renderer/             the titleblock UI (index.html / styles.css / renderer.js)
 test/                   parser tests + fixtures  (npm test)

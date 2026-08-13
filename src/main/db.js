@@ -1,42 +1,46 @@
 'use strict';
 /**
- * db.js — local-first SQLite store.
+ * db.js — local-first SQLite store, backed by sql.js (SQLite compiled to
+ * WebAssembly). No native compilation is required, so `npm install` never
+ * needs Python or a C++ toolchain.
  *
  * Golden rule: LOCAL STATE IS NEVER LOST ON SYNC. Incoming source items are
  * matched to existing rows by (source, source_id) and MERGED — we update only
  * the source-derived columns and never touch checked / snoozed_until /
  * dismissed / manual. We never wipe-and-rebuild the table.
+ *
+ * sql.js keeps the database in memory; we persist by exporting the bytes to
+ * the .sqlite file after every mutation.
  */
 
 const path = require('node:path');
 const fs = require('node:fs');
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS tasks (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  source        TEXT NOT NULL,            -- 'monday' | 'email' | 'manual'
-  source_id     TEXT NOT NULL,            -- monday item/subitem id, or conversationId, or uuid
-  conversation_id TEXT,                   -- email threads (dismissal key)
+  source        TEXT NOT NULL,
+  source_id     TEXT NOT NULL,
+  conversation_id TEXT,
   title         TEXT NOT NULL,
   project       TEXT,
   scope         TEXT,
-  due_date      TEXT,                     -- 'YYYY-MM-DD' or NULL
+  due_date      TEXT,
   completed_date TEXT,
   url           TEXT,
   is_leaf       INTEGER DEFAULT 0,
   parent_id     TEXT,
   status        TEXT,
   priority      TEXT,
-  source_done   INTEGER DEFAULT 0,        -- done at the source (monday completed / handled)
-  reasons       TEXT,                     -- classifier reasons (email), JSON
-  -- local state (never overwritten by sync) --
+  source_done   INTEGER DEFAULT 0,
+  reasons       TEXT,
   checked       INTEGER DEFAULT 0,
   checked_at    TEXT,
   snoozed_until TEXT,
   dismissed     INTEGER DEFAULT 0,
   manual        INTEGER DEFAULT 0,
-  absent        INTEGER DEFAULT 0,        -- not seen in the latest sync of its source
+  absent        INTEGER DEFAULT 0,
   first_seen    TEXT DEFAULT (datetime('now')),
   last_synced   TEXT,
   UNIQUE(source, source_id)
@@ -60,157 +64,220 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 `;
 
+function locateWasm(file) {
+  const candidates = [
+    path.join(__dirname, '..', '..', 'node_modules', 'sql.js', 'dist', file),
+    process.resourcesPath
+      ? path.join(process.resourcesPath, 'app', 'node_modules', 'sql.js', 'dist', file)
+      : null,
+    process.resourcesPath
+      ? path.join(process.resourcesPath, 'node_modules', 'sql.js', 'dist', file)
+      : null,
+  ].filter(Boolean);
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return candidates[0];
+}
+
+let SQLPromise = null;
+function getSQL() {
+  if (!SQLPromise) SQLPromise = initSqlJs({ locateFile: locateWasm });
+  return SQLPromise;
+}
+
 class Store {
-  /** @param {string} dbPath */
-  constructor(dbPath) {
+  /**
+   * @param {string} dbPath
+   * @returns {Promise<Store>}
+   */
+  static async open(dbPath) {
+    const SQL = await getSQL();
+    const store = new Store();
+    store.path = dbPath;
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    this.db = new Database(dbPath);
-    this.db.pragma('journal_mode = WAL');
-    this.db.exec(SCHEMA);
-    this._prepare();
+    const existing = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
+    store.db = new SQL.Database(existing);
+    store.db.run(SCHEMA);
+    store._save();
+    return store;
   }
 
-  _prepare() {
-    this.stmts = {
-      findBySource: this.db.prepare('SELECT * FROM tasks WHERE source=? AND source_id=?'),
-      insert: this.db.prepare(`
-        INSERT INTO tasks (source, source_id, conversation_id, title, project, scope,
-          due_date, completed_date, url, is_leaf, parent_id, status, priority,
-          source_done, reasons, manual, absent, last_synced)
-        VALUES (@source, @source_id, @conversation_id, @title, @project, @scope,
-          @due_date, @completed_date, @url, @is_leaf, @parent_id, @status, @priority,
-          @source_done, @reasons, @manual, 0, datetime('now'))`),
-      // Update ONLY source-derived columns. Local state columns are untouched.
-      updateSource: this.db.prepare(`
-        UPDATE tasks SET
-          conversation_id=@conversation_id, title=@title, project=@project, scope=@scope,
-          due_date=@due_date, completed_date=@completed_date, url=@url, is_leaf=@is_leaf,
-          parent_id=@parent_id, status=@status, priority=@priority,
-          source_done=@source_done, reasons=@reasons, absent=0, last_synced=datetime('now')
-        WHERE source=@source AND source_id=@source_id`),
-      markAbsent: this.db.prepare(
-        `UPDATE tasks SET absent=1 WHERE source=? AND manual=0 AND source_id NOT IN (SELECT value FROM json_each(?))`
-      ),
-      allActive: this.db.prepare('SELECT * FROM tasks'),
-      setChecked: this.db.prepare(
-        "UPDATE tasks SET checked=@checked, checked_at=CASE WHEN @checked=1 THEN datetime('now') ELSE NULL END WHERE id=@id"
-      ),
-      setSnooze: this.db.prepare('UPDATE tasks SET snoozed_until=@date WHERE id=@id'),
-      setDismissed: this.db.prepare('UPDATE tasks SET dismissed=1 WHERE id=@id'),
-      getById: this.db.prepare('SELECT * FROM tasks WHERE id=?'),
-      insertManual: this.db.prepare(`
-        INSERT INTO tasks (source, source_id, title, project, due_date, manual, last_synced)
-        VALUES ('manual', @source_id, @title, @project, @due_date, 1, datetime('now'))`),
-      logStart: this.db.prepare(
-        "INSERT INTO sync_log (source, started_at) VALUES (?, datetime('now'))"
-      ),
-      logFinish: this.db.prepare(
-        'UPDATE sync_log SET finished_at=datetime(\'now\'), ok=?, message=?, item_count=? WHERE id=?'
-      ),
-      lastSync: this.db.prepare(
-        'SELECT * FROM sync_log WHERE ok=1 ORDER BY id DESC LIMIT 1'
-      ),
-      getMeta: this.db.prepare('SELECT value FROM meta WHERE key=?'),
-      setMeta: this.db.prepare(
-        'INSERT INTO meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value'
-      ),
-    };
+  _save() {
+    const data = this.db.export();
+    fs.writeFileSync(this.path, Buffer.from(data));
+  }
+
+  /** Run a mutation with positional (?) params. */
+  run(sql, params = []) {
+    this.db.run(sql, params);
+  }
+
+  /** Return all rows (array of plain objects) for a query. */
+  all(sql, params = []) {
+    const stmt = this.db.prepare(sql);
+    try {
+      if (params && params.length) stmt.bind(params);
+      const rows = [];
+      while (stmt.step()) rows.push(stmt.getAsObject());
+      return rows;
+    } finally {
+      stmt.free();
+    }
+  }
+
+  get(sql, params = []) {
+    const rows = this.all(sql, params);
+    return rows.length ? rows[0] : null;
+  }
+
+  _lastInsertId() {
+    const r = this.get('SELECT last_insert_rowid() AS id');
+    return r ? r.id : null;
   }
 
   /**
    * Merge a batch of normalized source tasks. Preserves all local state.
-   * @param {object[]} tasks normalized records (see sync/*.js)
+   * @param {object[]} tasks
    * @param {string} source 'monday' | 'email'
    * @param {object} [opts] { markAbsentUnseen: boolean }
    */
   mergeTasks(tasks, source, opts = {}) {
-    const rows = tasks.map((t) => ({
-      source,
-      source_id: String(t.sourceId),
-      conversation_id: t.conversationId ?? null,
-      title: t.title ?? '(untitled)',
-      project: t.project ?? null,
-      scope: t.scope ?? null,
-      due_date: t.dueDate ?? null,
-      completed_date: t.completedDate ?? null,
-      url: t.url ?? null,
-      is_leaf: t.isLeaf ? 1 : 0,
-      parent_id: t.parentId ?? null,
-      status: t.status ?? null,
-      priority: t.priority ?? null,
-      source_done: t.done ? 1 : 0,
-      reasons: t.reasons ? JSON.stringify(t.reasons) : null,
-      manual: 0,
-    }));
-
-    const tx = this.db.transaction((batch) => {
-      for (const r of batch) {
-        const existing = this.stmts.findBySource.get(r.source, r.source_id);
-        if (existing) this.stmts.updateSource.run(r);
-        else this.stmts.insert.run(r);
-      }
+    this.db.run('BEGIN');
+    try {
       if (opts.markAbsentUnseen) {
-        const ids = JSON.stringify(batch.map((r) => r.source_id));
-        this.stmts.markAbsent.run(source, ids);
+        // Anything not re-seen below stays absent (but keeps its local state).
+        this.run('UPDATE tasks SET absent=1 WHERE source=? AND manual=0', [source]);
       }
-    });
-    tx(rows);
-    return rows.length;
+      for (const t of tasks) {
+        const row = {
+          source,
+          source_id: String(t.sourceId),
+          conversation_id: t.conversationId ?? null,
+          title: t.title ?? '(untitled)',
+          project: t.project ?? null,
+          scope: t.scope ?? null,
+          due_date: t.dueDate ?? null,
+          completed_date: t.completedDate ?? null,
+          url: t.url ?? null,
+          is_leaf: t.isLeaf ? 1 : 0,
+          parent_id: t.parentId ?? null,
+          status: t.status ?? null,
+          priority: t.priority ?? null,
+          source_done: t.done ? 1 : 0,
+          reasons: t.reasons ? JSON.stringify(t.reasons) : null,
+        };
+        const existing = this.get('SELECT id FROM tasks WHERE source=? AND source_id=?', [
+          row.source,
+          row.source_id,
+        ]);
+        if (existing) {
+          this.run(
+            `UPDATE tasks SET conversation_id=?, title=?, project=?, scope=?, due_date=?,
+               completed_date=?, url=?, is_leaf=?, parent_id=?, status=?, priority=?,
+               source_done=?, reasons=?, absent=0, last_synced=datetime('now')
+             WHERE source=? AND source_id=?`,
+            [
+              row.conversation_id, row.title, row.project, row.scope, row.due_date,
+              row.completed_date, row.url, row.is_leaf, row.parent_id, row.status,
+              row.priority, row.source_done, row.reasons, row.source, row.source_id,
+            ]
+          );
+        } else {
+          this.run(
+            `INSERT INTO tasks (source, source_id, conversation_id, title, project, scope,
+               due_date, completed_date, url, is_leaf, parent_id, status, priority,
+               source_done, reasons, manual, absent, last_synced)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,datetime('now'))`,
+            [
+              row.source, row.source_id, row.conversation_id, row.title, row.project,
+              row.scope, row.due_date, row.completed_date, row.url, row.is_leaf,
+              row.parent_id, row.status, row.priority, row.source_done, row.reasons,
+            ]
+          );
+        }
+      }
+      this.db.run('COMMIT');
+    } catch (e) {
+      this.db.run('ROLLBACK');
+      throw e;
+    }
+    this._save();
+    return tasks.length;
   }
 
   allTasks() {
-    return this.stmts.allActive.all();
+    return this.all('SELECT * FROM tasks');
   }
 
   setChecked(id, checked) {
-    return this.stmts.setChecked.run({ id, checked: checked ? 1 : 0 });
+    this.run(
+      "UPDATE tasks SET checked=?, checked_at=CASE WHEN ?=1 THEN datetime('now') ELSE NULL END WHERE id=?",
+      [checked ? 1 : 0, checked ? 1 : 0, id]
+    );
+    this._save();
   }
 
   snooze(id, dateISO) {
-    return this.stmts.setSnooze.run({ id, date: dateISO });
+    this.run('UPDATE tasks SET snoozed_until=? WHERE id=?', [dateISO, id]);
+    this._save();
   }
 
   dismiss(id) {
-    return this.stmts.setDismissed.run({ id });
+    this.run('UPDATE tasks SET dismissed=1 WHERE id=?', [id]);
+    this._save();
   }
 
   getTask(id) {
-    return this.stmts.getById.get(id);
+    return this.get('SELECT * FROM tasks WHERE id=?', [id]);
   }
 
   addManual({ title, project, dueDate }) {
     const sourceId = `manual-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-    const info = this.stmts.insertManual.run({
-      source_id: sourceId,
-      title,
-      project: project || null,
-      due_date: dueDate || null,
-    });
-    return this.getTask(info.lastInsertRowid);
+    this.run(
+      `INSERT INTO tasks (source, source_id, title, project, due_date, manual, last_synced)
+       VALUES ('manual', ?, ?, ?, ?, 1, datetime('now'))`,
+      [sourceId, title, project || null, dueDate || null]
+    );
+    const id = this._lastInsertId();
+    this._save();
+    return this.getTask(id);
   }
 
   startSync(source) {
-    return this.stmts.logStart.run(source).lastInsertRowid;
+    this.run("INSERT INTO sync_log (source, started_at) VALUES (?, datetime('now'))", [source]);
+    const id = this._lastInsertId();
+    this._save();
+    return id;
   }
 
   finishSync(id, ok, message, count) {
-    return this.stmts.logFinish.run(ok ? 1 : 0, message || null, count ?? null, id);
+    this.run(
+      "UPDATE sync_log SET finished_at=datetime('now'), ok=?, message=?, item_count=? WHERE id=?",
+      [ok ? 1 : 0, message || null, count ?? null, id]
+    );
+    this._save();
   }
 
   lastSuccessfulSync() {
-    return this.stmts.lastSync.get();
+    return this.get('SELECT * FROM sync_log WHERE ok=1 ORDER BY id DESC LIMIT 1');
   }
 
   getMeta(key) {
-    const row = this.stmts.getMeta.get(key);
+    const row = this.get('SELECT value FROM meta WHERE key=?', [key]);
     return row ? row.value : null;
   }
 
   setMeta(key, value) {
-    return this.stmts.setMeta.run(key, value == null ? null : String(value));
+    this.run(
+      'INSERT INTO meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+      [key, value == null ? null : String(value)]
+    );
+    this._save();
   }
 
   close() {
+    try { this._save(); } catch (_) { /* ignore */ }
     this.db.close();
   }
 }
