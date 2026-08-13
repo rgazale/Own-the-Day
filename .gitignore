@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build output
+release/
+dist/
+out/
+
+# Secrets & local config — NEVER commit
+.env
+.env.local
+*.pem
+*.key
+
+# Local database & runtime state (per-machine, never in the repo)
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+/data/
+mutation-audit.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+
+# Electron
+.cache/

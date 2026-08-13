@@ -1,0 +1,83 @@
+{
+  "_comment": "Editable classifier rules for turning Outlook email into tasks. Tune these without touching code, then click 'Sync now'. A thread is kept as a task when its score >= threshold. Weights are added up per matched signal.",
+
+  "threshold": 3.0,
+
+  "myName": ["Ryan", "Gazale", "Ryan Gazale", "RCDD"],
+  "myEmail": "rgazale@mcmillanlv.com",
+
+  "recipientWeights": {
+    "_comment": "How much the To:/Cc: placement contributes.",
+    "toOnlyRecipient": 3.5,
+    "toFirstRecipient": 2.5,
+    "toRecipient": 1.5,
+    "ccRecipient": 0.25
+  },
+
+  "nameNextToRequestWeight": 2.5,
+  "nameNextToRequestWindow": 60,
+
+  "requestVerbs": {
+    "_comment": "Verbs that indicate an ask aimed at me. weight applied once if any match.",
+    "weight": 1.5,
+    "words": [
+      "please review", "please confirm", "please advise", "please provide",
+      "please issue", "please send", "please complete", "please sign off",
+      "please approve", "please respond", "can you", "could you", "need you to",
+      "review and confirm", "review and comment", "confirm receipt",
+      "sign off", "approve", "provide", "advise", "issue", "respond"
+    ]
+  },
+
+  "deadlineTerms": {
+    "_comment": "Deadline / urgency language.",
+    "weight": 2.0,
+    "words": [
+      "by cop", "by cob", "by eod", "by friday", "by monday", "by end of day",
+      "due", "deadline", "asap", "pronto", "today", "tomorrow",
+      "rfi", "pco", "submittal", "turnaround", "response required"
+    ]
+  },
+
+  "importanceFlagWeight": 1.5,
+  "followUpFlagWeight": 2.0,
+
+  "denySenders": {
+    "_comment": "Automated / noise senders — any match hard-drops the thread regardless of score.",
+    "exact": [],
+    "endsWith": [
+      "noreply@email.meta.com",
+      "reply@mail.forma.autodesk.com"
+    ],
+    "contains": [
+      "noreply@", "no-reply@", "donotreply@", "do-not-reply@", "reply@mail.",
+      "notifications@", "notification@", "@bim360", "@autodesk.com",
+      "procore.com", "mailer@", "bounce@", "postmaster@", "calendar-notification"
+    ]
+  },
+
+  "allowSenders": {
+    "_comment": "Known real senders — a small bonus so genuine program email clears the bar more easily.",
+    "weight": 1.0,
+    "domains": [
+      "jll.com", "tbanda.com", "mcm-uk.com", "bastionprojects.com",
+      "studios.com", "hrav.io", "arup.com", "snap.com", "fhda.edu",
+      "altenconstruction.com", "mcmillanlv.com"
+    ]
+  },
+
+  "largeDistributionList": {
+    "_comment": "If I'm one of many Cc'd and NOT named in the body, treat as a blast and penalize.",
+    "ccThreshold": 20,
+    "penalty": -4.0
+  },
+
+  "fyiPhrases": {
+    "_comment": "Pure-FYI language with no ask. Penalized (not hard-dropped) so a real ask elsewhere can still win.",
+    "penalty": -1.5,
+    "words": [
+      "for your records", "for your reference", "fyi", "please see attached",
+      "no action required", "no action needed", "for your information"
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "_comment": "Synthetic-but-faithful monday activity-log entries for the Due Date column (date_mm4ad31d). NEWEST-FIRST, exactly as the API returns them. `data` is a JSON string, like the real payload. Covers: current value, first-occurrence-wins over an older value, a CLEARED value (null) that must beat an older date (Wu Yee), a parent rollup, and leaf subitems.",
+  "entries": [
+    {
+      "created_at": "17865666800000000",
+      "data": "{\"parent_board_id\":18417698484,\"pulse_name\":\"Foothill Dental\",\"is_rollup_column\":true,\"is_leaf\":false,\"pulse_id\":12505842000,\"column_id\":\"date_mm4ad31d\",\"column_title\":\"Due Date\",\"rollup_generated_value\":true,\"column_type\":\"date\",\"value\":{\"date\":\"2026-08-24\",\"icon\":null}}"
+    },
+    {
+      "created_at": "17865666000000000",
+      "data": "{\"parent_board_id\":18417698484,\"pulse_name\":\"AV Shop Drawings\",\"is_rollup_column\":true,\"is_leaf\":true,\"pulse_id\":12505903412,\"parent_item_id\":12505842000,\"column_id\":\"date_mm4ad31d\",\"column_title\":\"Due Date\",\"column_type\":\"date\",\"value\":{\"date\":\"2026-09-05\",\"icon\":null,\"time\":null}}"
+    },
+    {
+      "created_at": "17865000000000000",
+      "data": "{\"parent_board_id\":18417698484,\"pulse_name\":\"AV Shop Drawings\",\"is_rollup_column\":true,\"is_leaf\":true,\"pulse_id\":12505903412,\"parent_item_id\":12505842000,\"column_id\":\"date_mm4ad31d\",\"column_title\":\"Due Date\",\"column_type\":\"date\",\"value\":{\"date\":\"2026-08-01\",\"icon\":null,\"time\":null}}"
+    },
+    {
+      "created_at": "17865600000000000",
+      "data": "{\"parent_board_id\":18417698484,\"previous_value\":{\"date\":\"2026-08-20\",\"icon\":null,\"time\":null},\"pulse_name\":\"Wu Yee\",\"is_rollup_column\":true,\"is_leaf\":false,\"pulse_id\":12600000001,\"column_id\":\"date_mm4ad31d\",\"column_title\":\"Due Date\",\"rollup_generated_value\":true,\"column_type\":\"date\",\"value\":null}"
+    },
+    {
+      "created_at": "17865000000000001",
+      "data": "{\"parent_board_id\":18417698484,\"pulse_name\":\"Wu Yee\",\"is_rollup_column\":true,\"is_leaf\":false,\"pulse_id\":12600000001,\"column_id\":\"date_mm4ad31d\",\"column_title\":\"Due Date\",\"rollup_generated_value\":true,\"column_type\":\"date\",\"value\":{\"date\":\"2026-08-20\",\"icon\":null}}"
+    },
+    {
+      "created_at": "17865500000000000",
+      "data": "{\"parent_board_id\":18417698484,\"pulse_name\":\"Telecom Shop Drawings\",\"is_rollup_column\":true,\"is_leaf\":true,\"pulse_id\":12700000005,\"parent_item_id\":12700000000,\"column_id\":\"date_mm4ad31d\",\"column_title\":\"Due Date\",\"column_type\":\"date\",\"value\":{\"date\":\"2026-08-05\",\"icon\":null,\"time\":null}}"
+    },
+    {
+      "created_at": "17865400000000000",
+      "data": "{\"parent_board_id\":18417698484,\"pulse_name\":\"Security Shop Drawings\",\"is_rollup_column\":true,\"is_leaf\":true,\"pulse_id\":12700000006,\"parent_item_id\":12700000000,\"column_id\":\"date_mm4ad31d\",\"column_title\":\"Due Date\",\"column_type\":\"date\",\"value\":{\"date\":\"2026-08-06\",\"icon\":null,\"time\":null}}"
+    }
+  ]
+}

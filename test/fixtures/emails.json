@@ -1,0 +1,101 @@
+{
+  "_comment": "Normalized Outlook messages for classifier tests. Mirrors the shape produced by the Graph sync layer.",
+  "messages": [
+    {
+      "_label": "TASK: to-only + deadline + request verb",
+      "conversationId": "c-1",
+      "subject": "300 Howard - please confirm 100% CD set by Friday",
+      "bodyText": "Ryan, can you review and confirm the Phase 2 telecom sheets? Due Friday COP.",
+      "importance": "normal",
+      "from": { "address": "pm@jll.com", "name": "Dana PM" },
+      "toRecipients": [ { "address": "rgazale@mcmillanlv.com", "name": "Ryan Gazale" } ],
+      "ccRecipients": [],
+      "flag": { "flagStatus": "notFlagged" },
+      "receivedDateTime": "2026-08-12T18:00:00Z",
+      "webLink": "https://outlook.office365.com/mail/id/c1"
+    },
+    {
+      "_label": "NOISE: automated notification sender (hard drop)",
+      "conversationId": "c-2",
+      "subject": "You have new activity in BIM 360",
+      "bodyText": "A document was updated. Please review the changes due today.",
+      "importance": "high",
+      "from": { "address": "noreply@email.meta.com", "name": "Autodesk" },
+      "toRecipients": [ { "address": "rgazale@mcmillanlv.com", "name": "Ryan Gazale" } ],
+      "ccRecipients": [],
+      "flag": { "flagStatus": "notFlagged" },
+      "receivedDateTime": "2026-08-12T09:00:00Z",
+      "webLink": "https://outlook.office365.com/mail/id/c2"
+    },
+    {
+      "_label": "NOISE: large DL, Cc'd among many, not named",
+      "conversationId": "c-3",
+      "subject": "Anthropic London - weekly program notes",
+      "bodyText": "Please see attached for your records. Meeting notes from the coordination call.",
+      "importance": "normal",
+      "from": { "address": "coord@arup.com", "name": "Program Coord" },
+      "toRecipients": [ { "address": "lead@arup.com", "name": "Lead" } ],
+      "ccRecipients": [
+        { "address": "a@x.com" }, { "address": "b@x.com" }, { "address": "c@x.com" },
+        { "address": "d@x.com" }, { "address": "e@x.com" }, { "address": "f@x.com" },
+        { "address": "g@x.com" }, { "address": "h@x.com" }, { "address": "i@x.com" },
+        { "address": "j@x.com" }, { "address": "k@x.com" }, { "address": "l@x.com" },
+        { "address": "m@x.com" }, { "address": "n@x.com" }, { "address": "o@x.com" },
+        { "address": "p@x.com" }, { "address": "q@x.com" }, { "address": "r@x.com" },
+        { "address": "s@x.com" }, { "address": "t@x.com" },
+        { "address": "rgazale@mcmillanlv.com", "name": "Ryan Gazale" }
+      ],
+      "flag": { "flagStatus": "notFlagged" },
+      "receivedDateTime": "2026-08-12T08:00:00Z",
+      "webLink": "https://outlook.office365.com/mail/id/c3"
+    },
+    {
+      "_label": "TASK: large DL but named next to a request in the body",
+      "conversationId": "c-4",
+      "subject": "Anthropic London - Stage 4 coordination",
+      "bodyText": "Team update below. Ryan - please provide the security riser diagram by Wednesday. Thanks.",
+      "importance": "normal",
+      "from": { "address": "coord@arup.com", "name": "Program Coord" },
+      "toRecipients": [ { "address": "lead@arup.com", "name": "Lead" } ],
+      "ccRecipients": [
+        { "address": "a@x.com" }, { "address": "b@x.com" }, { "address": "c@x.com" },
+        { "address": "d@x.com" }, { "address": "e@x.com" }, { "address": "f@x.com" },
+        { "address": "g@x.com" }, { "address": "h@x.com" }, { "address": "i@x.com" },
+        { "address": "j@x.com" }, { "address": "k@x.com" }, { "address": "l@x.com" },
+        { "address": "m@x.com" }, { "address": "n@x.com" }, { "address": "o@x.com" },
+        { "address": "p@x.com" }, { "address": "q@x.com" }, { "address": "r@x.com" },
+        { "address": "s@x.com" }, { "address": "t@x.com" },
+        { "address": "rgazale@mcmillanlv.com", "name": "Ryan Gazale" }
+      ],
+      "flag": { "flagStatus": "notFlagged" },
+      "receivedDateTime": "2026-08-12T08:30:00Z",
+      "webLink": "https://outlook.office365.com/mail/id/c4"
+    },
+    {
+      "_label": "NOISE: pure FYI, Cc only",
+      "conversationId": "c-5",
+      "subject": "FYI - updated site logistics plan",
+      "bodyText": "For your information, attached is the latest logistics plan. No action needed.",
+      "importance": "normal",
+      "from": { "address": "field@altenconstruction.com", "name": "Field Eng" },
+      "toRecipients": [ { "address": "team@altenconstruction.com" } ],
+      "ccRecipients": [ { "address": "rgazale@mcmillanlv.com", "name": "Ryan Gazale" } ],
+      "flag": { "flagStatus": "notFlagged" },
+      "receivedDateTime": "2026-08-12T07:00:00Z",
+      "webLink": "https://outlook.office365.com/mail/id/c5"
+    },
+    {
+      "_label": "TASK but HANDLED: I already replied in Sent Items",
+      "conversationId": "c-6",
+      "subject": "RFI 042 - please advise on cable tray routing",
+      "bodyText": "Ryan, please advise on the RFI response. Due by COB tomorrow.",
+      "importance": "high",
+      "from": { "address": "gc@bastionprojects.com", "name": "GC" },
+      "toRecipients": [ { "address": "rgazale@mcmillanlv.com", "name": "Ryan Gazale" } ],
+      "ccRecipients": [],
+      "flag": { "flagStatus": "flagged" },
+      "receivedDateTime": "2026-08-11T16:00:00Z",
+      "webLink": "https://outlook.office365.com/mail/id/c6"
+    }
+  ]
+}

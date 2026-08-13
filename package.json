@@ -1,0 +1,66 @@
+{
+  "name": "mdc-daily",
+  "productName": "MDC Daily",
+  "version": "1.0.0",
+  "description": "One always-current list of every work task assigned to Ryan Gazale, merged from monday.com, Outlook, and manual entries.",
+  "author": "MDC Low Voltage Systems",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "prove:monday": "node scripts/prove-monday.js",
+    "test": "node --test test/*.test.js",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "electron-builder --win",
+    "pack": "electron-builder --dir"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^2.16.2",
+    "better-sqlite3": "^11.5.0",
+    "dotenv": "^16.4.5",
+    "keytar": "^7.9.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.1",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.mcmillanlv.mdcdaily",
+    "productName": "MDC Daily",
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/node_modules/keytar/**"
+    ],
+    "files": [
+      "src/**/*",
+      "config/**/*",
+      "assets/**/*",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      { "from": "config", "to": "config" }
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MDC Daily"
+    }
+  }
+}
