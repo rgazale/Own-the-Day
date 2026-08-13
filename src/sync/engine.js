@@ -26,8 +26,12 @@ async function runSync(store, config, opts = {}) {
     const logId = store.startSync('monday');
     try {
       status('Syncing monday…');
-      const since = store.getMeta(MONDAY_WATERMARK);
-      const { tasks, newestCreatedAt } = await syncMonday(config.monday, { sinceCreatedAt: since });
+      // Full activity-log scan every sync. The date reconstruction needs the
+      // COMPLETE current state per item; a delta-only read would leave items
+      // whose dates didn't change this cycle with no date and wrongly wipe
+      // them. The board is small (a few pages), so a full scan is cheap and
+      // makes every sync reproduce the correct first-sync result.
+      const { tasks, newestCreatedAt } = await syncMonday(config.monday, {});
       const n = store.mergeTasks(tasks, 'monday', { markAbsentUnseen: true });
       if (newestCreatedAt) store.setMeta(MONDAY_WATERMARK, newestCreatedAt);
       store.finishSync(logId, true, null, n);
