@@ -10,7 +10,7 @@
   "scripts": {
     "start": "electron .",
     "prove:monday": "node scripts/prove-monday.js",
-    "test": "node --test test/*.test.js",
+    "test": "node --test \"test/**/*.test.js\"",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "postinstall": "electron-builder install-app-deps",
     "dist": "electron-builder --win",

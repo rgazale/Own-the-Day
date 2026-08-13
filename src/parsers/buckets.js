@@ -64,6 +64,8 @@ function countdownLabel(dueDate, today) {
 function isVisible(t, today) {
   if (t.checked) return false;
   if (t.dismissed) return false;
+  if (t.absent) return false;        // no longer returned by its source
+  if (t.source_done) return false;   // marked done in monday/Outlook
   if (t.snoozed_until && diffDays(today, t.snoozed_until) > 0) return false;
   return true;
 }
