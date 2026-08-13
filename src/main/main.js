@@ -103,8 +103,12 @@ async function doSync(reason) {
   if (syncing) return;
   syncing = true;
   refreshRenderer();
+  // Only a user-initiated sync may pop the interactive Outlook sign-in.
+  const interactive = reason === 'manual' || reason === 'tray';
   try {
     const result = await runSync(store, config, {
+      interactive,
+      onSourceDone: () => { updateTray(); refreshRenderer(); },
       deviceCodeCallback: (info) => {
         dialog.showMessageBox({
           type: 'info',

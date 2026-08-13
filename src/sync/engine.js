@@ -40,6 +40,8 @@ async function runSync(store, config, opts = {}) {
       store.finishSync(logId, false, e.message, null);
       errors.push({ source: 'monday', message: e.message });
     }
+    // Surface monday results immediately, before Outlook (which may prompt).
+    if (opts.onSourceDone) opts.onSourceDone('monday');
   }
 
   // ---- Outlook (only if configured) ----
@@ -51,14 +53,19 @@ async function runSync(store, config, opts = {}) {
       const { tasks } = await syncOutlook(config.outlook, {
         rules,
         deviceCodeCallback: opts.deviceCodeCallback,
+        interactive: opts.interactive,
       });
       const n = store.mergeTasks(tasks, 'email', { markAbsentUnseen: true });
       store.finishSync(logId, true, null, n);
       counts.email = n;
     } catch (e) {
       store.finishSync(logId, false, e.message, null);
-      errors.push({ source: 'email', message: e.message });
+      // "Needs sign-in" on a background sync is expected, not an error to
+      // alarm the user with — it just means click Sync now to connect.
+      if (e.code === 'NEEDS_SIGNIN') counts.email = 'sign-in required (Sync now)';
+      else errors.push({ source: 'email', message: e.message });
     }
+    if (opts.onSourceDone) opts.onSourceDone('email');
   } else {
     counts.email = 'skipped (MS_CLIENT_ID not set)';
   }

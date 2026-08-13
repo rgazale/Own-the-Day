@@ -59,6 +59,15 @@ async function acquireToken(cfg, opts = {}) {
     }
   }
 
+  // Background/launch syncs must never block on an interactive sign-in. Only
+  // the device-code flow (which waits for the user) runs when explicitly
+  // requested via a manual "Sync now".
+  if (!opts.interactive) {
+    const e = new Error('Outlook sign-in required — click “Sync now” to sign in.');
+    e.code = 'NEEDS_SIGNIN';
+    throw e;
+  }
+
   // Device-code flow: surface the user_code + verification URL to the caller.
   const res = await pca.acquireTokenByDeviceCode({
     scopes: cfg.scopes,
