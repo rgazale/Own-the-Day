@@ -14,6 +14,22 @@ const BUCKET_LABELS = {
   none: 'No due date',
 };
 
+/**
+ * The due date actually used for display/bucketing: a local override wins over
+ * the synced date. Override of '' means "deliberately no date".
+ */
+function effectiveDue(t) {
+  if (!t) return null;
+  const ov = t.due_override;
+  if (ov !== undefined && ov !== null) return ov === '' ? null : ov;
+  return t.due_date ?? t.dueDate ?? null;
+}
+
+/** Displayed title: a local rename wins over the source title. */
+function effectiveTitle(t) {
+  return (t && t.title_override) || (t && t.title) || '';
+}
+
 /** 'YYYY-MM-DD' for a Date (local). */
 function toISODate(d) {
   const y = d.getFullYear();
@@ -64,6 +80,8 @@ function countdownLabel(dueDate, today) {
 function isVisible(t, today) {
   if (t.checked) return false;
   if (t.dismissed) return false;
+  if (t.absent) return false;        // no longer returned by its source
+  if (t.source_done) return false;   // marked done in monday/Outlook
   if (t.snoozed_until && diffDays(today, t.snoozed_until) > 0) return false;
   return true;
 }
@@ -77,16 +95,16 @@ function groupAndSort(tasks, today = todayISO()) {
   const groups = Object.fromEntries(BUCKET_ORDER.map((k) => [k, []]));
   for (const t of tasks) {
     if (!isVisible(t, today)) continue;
-    const key = bucketFor(t.due_date ?? t.dueDate ?? null, today);
+    const key = bucketFor(effectiveDue(t), today);
     groups[key].push(t);
   }
   const cmp = (a, b) => {
-    const da = a.due_date ?? a.dueDate ?? null;
-    const db = b.due_date ?? b.dueDate ?? null;
+    const da = effectiveDue(a);
+    const db = effectiveDue(b);
     if (da && db && da !== db) return da < db ? -1 : 1;
     if (da && !db) return -1;
     if (!da && db) return 1;
-    return (a.title || '').localeCompare(b.title || '');
+    return effectiveTitle(a).localeCompare(effectiveTitle(b));
   };
   return BUCKET_ORDER.map((key) => {
     const list = groups[key].sort(cmp);
@@ -99,7 +117,7 @@ function urgentCount(tasks, today = todayISO()) {
   let n = 0;
   for (const t of tasks) {
     if (!isVisible(t, today)) continue;
-    const b = bucketFor(t.due_date ?? t.dueDate ?? null, today);
+    const b = bucketFor(effectiveDue(t), today);
     if (b === 'overdue' || b === 'today') n += 1;
   }
   return n;
@@ -116,4 +134,6 @@ module.exports = {
   isVisible,
   groupAndSort,
   urgentCount,
+  effectiveDue,
+  effectiveTitle,
 };

@@ -133,6 +133,13 @@ async function syncMonday(cfg, opts = {}) {
     fetchColumnDates(cfg, cfg.completedDateColumn, opts.sinceCreatedAt, deps),
   ]);
 
+  // Safety net: if the board has items but the activity log returned no date
+  // entries at all, the reconstruction is empty and merging would wipe every
+  // due date. Fail the sync instead so the engine keeps the last good data.
+  if (items.length > 0 && dueMap.size === 0 && doneMap.size === 0) {
+    throw new Error('activity log returned no date entries; keeping last good data');
+  }
+
   const tasks = [];
   let newestCreatedAt = opts.sinceCreatedAt || null;
   const trackNewest = (map) => {
