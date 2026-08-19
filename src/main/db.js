@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   dismissed     INTEGER DEFAULT 0,
   manual        INTEGER DEFAULT 0,
   absent        INTEGER DEFAULT 0,
+  due_override  TEXT,
+  title_override TEXT,
   first_seen    TEXT DEFAULT (datetime('now')),
   last_synced   TEXT,
   UNIQUE(source, source_id)
@@ -99,8 +101,23 @@ class Store {
     const existing = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
     store.db = new SQL.Database(existing);
     store.db.run(SCHEMA);
+    store._migrate();
     store._save();
     return store;
+  }
+
+  /** Additive migrations for databases created by an earlier version. */
+  _migrate() {
+    const cols = this.all('PRAGMA table_info(tasks)').map((r) => r.name);
+    // Local due-date override: takes precedence over the synced due_date for
+    // display and bucketing, and is preserved across syncs (it's local state).
+    // A date string = that date; '' = deliberately no date; NULL = no override.
+    if (!cols.includes('due_override')) {
+      this.db.run('ALTER TABLE tasks ADD COLUMN due_override TEXT');
+    }
+    if (!cols.includes('title_override')) {
+      this.db.run('ALTER TABLE tasks ADD COLUMN title_override TEXT');
+    }
   }
 
   _save() {
@@ -220,6 +237,33 @@ class Store {
 
   snooze(id, dateISO) {
     this.run('UPDATE tasks SET snoozed_until=? WHERE id=?', [dateISO, id]);
+    this._save();
+  }
+
+  /**
+   * Set the local due-date override.
+   * @param {number} id
+   * @param {string|null} value 'YYYY-MM-DD' to set a date, '' to force "no
+   *   date", or null to remove the override (fall back to the synced date).
+   */
+  setDue(id, value) {
+    if (value === null) {
+      this.run('UPDATE tasks SET due_override=NULL WHERE id=?', [id]);
+    } else {
+      this.run('UPDATE tasks SET due_override=? WHERE id=?', [value, id]);
+    }
+    this._save();
+  }
+
+  /** Rename a task locally (override the displayed title). */
+  setTitle(id, title) {
+    this.run('UPDATE tasks SET title_override=? WHERE id=?', [title || null, id]);
+    this._save();
+  }
+
+  /** Hard-delete a task row. Used for manual tasks the user removes. */
+  deleteTask(id) {
+    this.run('DELETE FROM tasks WHERE id=?', [id]);
     this._save();
   }
 

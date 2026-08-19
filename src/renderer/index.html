@@ -15,41 +15,42 @@
       <div class="tb-sub">Design task register</div>
     </div>
     <div class="tb-right">
-      <div class="tb-field"><span class="tb-k">DATA AS OF</span><span id="asof" class="tb-v mono">—</span></div>
-      <div class="tb-field"><span class="tb-k">SOURCES</span><span id="sources" class="tb-v mono">monday · outlook · mine</span></div>
-      <div class="tb-field"><span class="tb-k">DUE / OVERDUE</span><span id="urgent" class="tb-v mono">0</span></div>
+      <div class="tb-field"><span class="tb-k">Updated</span><span id="asof" class="tb-v mono">—</span></div>
+      <div class="tb-field"><span class="tb-k">Due / overdue</span><span id="urgent" class="tb-v mono urgent-num">0</span></div>
     </div>
   </header>
 
   <div id="errorline" class="errorline" hidden></div>
 
   <div class="toolbar">
-    <button id="syncBtn" class="btn">Sync now</button>
+    <button id="syncBtn" class="btn btn-primary" title="Refresh from monday and Outlook">↻ Sync now</button>
     <button id="addBtn" class="btn btn-ghost">+ Add task</button>
+    <div class="search-wrap">
+      <input id="search" class="search" type="text" placeholder="Filter tasks…" autocomplete="off" />
+    </div>
     <span id="syncState" class="mono syncstate"></span>
   </div>
 
   <!-- Add-task form (hidden until +Add) -->
   <form id="addForm" class="addform" hidden>
-    <input id="addTitle" class="inp" type="text" placeholder="Task title" required />
+    <input id="addTitle" class="inp" type="text" placeholder="What needs doing?" required />
     <div class="addrow">
       <input id="addProject" class="inp" type="text" placeholder="Project (optional)" />
-      <input id="addDue" class="inp mono" type="date" />
+      <input id="addDue" class="inp mono" type="date" title="Due date (optional)" />
     </div>
-    <div class="addrow">
-      <button type="submit" class="btn">Add</button>
+    <div class="addrow addrow-actions">
+      <button type="submit" class="btn btn-primary">Add task</button>
       <button type="button" id="addCancel" class="btn btn-ghost">Cancel</button>
     </div>
   </form>
 
   <main id="list" class="list"></main>
 
-  <footer class="foot mono">
-    <span id="footcount">0 tasks</span>
-    <span id="footwb"></span>
+  <footer class="foot">
+    <span id="footcount" class="mono">0 open</span>
+    <span id="footwb" class="mono"></span>
   </footer>
 
-  <!-- Snooze popover template -->
   <script src="renderer.js"></script>
 </body>
 </html>

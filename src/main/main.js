@@ -199,6 +199,20 @@ function registerIpc() {
     updateTray();
     return buildState();
   });
+  ipcMain.handle('task:setDue', (_e, { id, value }) => {
+    store.setDue(id, value);
+    updateTray();
+    return buildState();
+  });
+  ipcMain.handle('task:setTitle', (_e, { id, title }) => {
+    store.setTitle(id, title);
+    return buildState();
+  });
+  ipcMain.handle('task:delete', (_e, { id }) => {
+    store.deleteTask(id);
+    updateTray();
+    return buildState();
+  });
   ipcMain.handle('task:dismiss', (_e, { id }) => {
     store.dismiss(id);
     updateTray();
